@@ -2,10 +2,10 @@ import { model, Schema } from 'mongoose';
 import { UserDoc } from '../util/types';
 
 const userSchema: Schema = new Schema({
-  username: { type: String, required: true },
+  username: { type: String },
   firstname: { type: String, required: true },
   lastname: { type: String, required: true },
-  password: { type: String, required: true },
+  password: { type: String },
   email: { type: String, required: true },
   role: [
     {
@@ -14,6 +14,8 @@ const userSchema: Schema = new Schema({
       require: true,
     },
   ],
+  resetPassword: String,
+  invitation: String,
 });
 
 export default model<UserDoc>('User', userSchema);

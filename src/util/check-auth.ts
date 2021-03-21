@@ -24,7 +24,7 @@ export default async (context: any): Promise<User> => {
       ).exec();
       
       if (!user) {
-        throw new Error();
+        throw new Error("Invalid credentials.");
       }
 
       return user.toObject({ getters: true });

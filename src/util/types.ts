@@ -14,6 +14,8 @@ export interface User {
   role: string[];
   token?: string;
   password?: string;
+  resetPassword?: string;
+  invitation?: string;
   _id?: string;
   id?: string;
 }
@@ -22,7 +24,6 @@ export interface UserDoc extends Document, User {
   _id?: string;
   id: string;
 }
-
 
 export interface Price {
   size: string;
@@ -85,9 +86,18 @@ export interface IngredientDoc extends Document, Ingredient {
   id: string;
 }
 
-
 export interface Size {
   name: string;
   values: { value: string; id?: string }[];
   id?: string;
+}
+
+export enum EmailType {
+  invite = 'invite',
+  reset = 'reset',
+}
+
+export interface EmailLocals {
+  firstname?: string;
+  url?: string;
 }

@@ -158,6 +158,9 @@ export default gql`
       email: String
       role: [String!]!
     ): String
+    register(token: String, username: String, password: String): String!
+    passwordReset(username: String, email: String): String!
+    completePasswordReset(token: String, password: String): String!
     createSize(name: String!, values: [String!]!): Size!
     createCategory(
       name: String!
