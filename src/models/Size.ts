@@ -1,8 +1,9 @@
 import { model, Schema } from 'mongoose';
+import { SizeDoc } from '../util/types';
 
-const sizeSchema = new Schema({
+const sizeSchema: Schema = new Schema({
   name: { type: String, require: true },
-  values: [{ value: { type: String, require: true } }],
+  values: [{ type: String, require: true }],
 });
 
-export default model('Size', sizeSchema);
+export default model<SizeDoc>('Size', sizeSchema);

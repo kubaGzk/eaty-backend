@@ -45,8 +45,13 @@ export interface Category {
   availableSides?: ItemType;
   items: ItemType;
   customComposition?: CustomCompositionType;
+  _id?: string;
+  id?: string;
 }
-export interface CategoryDoc extends Document, Category {}
+export interface CategoryDoc extends Document, Category {
+  _id?: string;
+  id: string;
+}
 
 export interface CustomComposition {
   size: SizeType;
@@ -61,6 +66,11 @@ export interface CustomComposition {
   items: ItemType;
 }
 
+export interface CustomCompositionDoc extends Document, CustomComposition {
+  _id?: string;
+  id: string;
+}
+
 export interface Item {
   name: string;
   description: string;
@@ -72,6 +82,13 @@ export interface Item {
   itemOptions: Options[];
   availableSides?: string[];
   customComposition?: string;
+  _id?: string;
+  id?: string;
+}
+
+export interface ItemDoc extends Document, Item {
+  _id?: string;
+  id: string;
 }
 
 export interface Ingredient {
@@ -88,7 +105,12 @@ export interface IngredientDoc extends Document, Ingredient {
 
 export interface Size {
   name: string;
-  values: { value: string; id?: string }[];
+  values: string[];
+  id?: string;
+}
+
+export interface SizeDoc extends Document, Size {
+  _id?: string;
   id?: string;
 }
 

@@ -29,19 +29,14 @@ export default gql`
 
   type Size {
     name: String!
-    values: [SizeValue!]!
+    values: [String!]!
     id: ID!
-  }
-
-  type SizeValue {
-    value: String!
-    id: ID
   }
 
   type Category {
     name: String!
     size: Size!
-    basePrice: Int
+    basePrice: Float!
     baseIngredients: [Ingredient!]
     options: [Option!]
     availableSides: [Item!]
@@ -50,7 +45,7 @@ export default gql`
     id: ID!
   }
 
-  interface Option {
+  type Option {
     mandatory: Boolean
     name: String!
     values: [OptionValues!]!
@@ -59,13 +54,14 @@ export default gql`
 
   type OptionValues {
     value: String!
-    priceChange: Int
+    priceChange: Float
     id: ID!
   }
 
   type Price {
     size: String!
-    price: Int!
+    price: Float!
+    id: ID
   }
 
   type Item {
@@ -82,10 +78,11 @@ export default gql`
     id: ID!
   }
 
-  interface Ingredient {
+  type Ingredient {
     name: String!
-    price: Price!
+    price: [Price!]!
     size: Size!
+    uniqueName: ID!
     id: ID!
   }
 
@@ -94,10 +91,11 @@ export default gql`
     items: [ID]!
     size: Size!
   }
-  type CustomCompositionIngredient implements Ingredient {
+  type CustomCompositionIngredient {
     name: String!
     price: Price!
     size: Size!
+    uniqueName: ID!
     removable: Boolean!
     group: String
     maxNumber: Int
@@ -117,7 +115,7 @@ export default gql`
 
   input PriceInput {
     size: String!
-    price: Int!
+    price: Float!
   }
 
   input ItemInput {
@@ -144,10 +142,23 @@ export default gql`
     customComposition: ID
   }
 
+  input UpdateSizeValue {
+    oldValue: String
+    newValue: String
+  }
+
   type Query {
     getCategory(categoryId: ID!): Category!
     getCategories: [Category!]!
+
+    getItem: String
     getItems(categories: [ID!]!): [Item]!
+
+    getSize: String
+    getSizes: String
+
+    getIngredient: String
+    getIngredients: String
   }
 
   type Mutation {
@@ -161,15 +172,43 @@ export default gql`
     register(token: String, username: String, password: String): String!
     passwordReset(username: String, email: String): String!
     completePasswordReset(token: String, password: String): String!
+
     createSize(name: String!, values: [String!]!): Size!
+    updateSize(name: String, updateValues: [UpdateSizeValue]): Size!
+    deleteSize(id: ID): String!
+
+    createIngredient(
+      name: String!
+      size: ID!
+      uniqueName: String!
+      price: [PriceInput!]!
+    ): Ingredient!
+    updateIngredient(
+      id: ID!
+      name: String
+      size: ID
+      uniqueName: String
+      price: [PriceInput]
+    ): Ingredient!
+    deleteIngredient(id: ID): String!
+
     createCategory(
       name: String!
       options: [OptionInput!]
       customComposition: ID
     ): Category!
-    updateCategory(id: ID!, name: String!): Category!
-    createItem(itemInput: ItemInput): Item
-    updateItem(itemId: ID!, itemInput: UpdateItemInput): Item
+    updateCategory(
+      id: ID!
+      name: String!
+      options: [OptionInput!]
+      customComposition: ID
+    ): Category!
+    deleteCategory(id: ID): String!
+
+    createItem(itemInput: ItemInput): Item!
+    updateItem(itemId: ID!, itemInput: UpdateItemInput): Item!
+    deleteItem(id: ID!): String!
+
     createCustomComposition(
       items: [ID!]
       ingredients: [ID!]!
@@ -178,5 +217,6 @@ export default gql`
       items: [ID!]
       ingredients: [ID!]!
     ): CustomComposition!
+    deleteCustomComposition(id: ID!): String!
   }
 `;

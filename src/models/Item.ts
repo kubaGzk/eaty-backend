@@ -1,6 +1,7 @@
 import { model, Schema } from 'mongoose';
+import { ItemDoc } from '../util/types';
 
-const itemSchema = new Schema({
+const itemSchema: Schema = new Schema({
   name: { type: String, require: true },
   description: { type: String, require: true },
   category: { type: Schema.Types.ObjectId, ref: 'Category' },
@@ -29,4 +30,4 @@ const itemSchema = new Schema({
   customComposition: { type: Schema.Types.ObjectId, ref: 'CustomComposition' },
 });
 
-export default model('Item', itemSchema);
+export default model<ItemDoc>('Item', itemSchema);

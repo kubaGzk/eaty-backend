@@ -1,5 +1,5 @@
 import { model, Schema } from 'mongoose';
-import { CustomComposition } from '../util/types';
+import { CustomCompositionDoc } from '../util/types';
 
 const ccSchema: Schema = new Schema({
   size: { type: Schema.Types.ObjectId, ref: 'Size' },
@@ -20,4 +20,4 @@ const ccSchema: Schema = new Schema({
   items: [{ type: Schema.Types.ObjectId, ref: 'Item' }],
 });
 
-export default model<CustomComposition>('CustomComposition', ccSchema);
+export default model<CustomCompositionDoc>('CustomComposition', ccSchema);

@@ -5,6 +5,10 @@ interface ValidationResult {
 
 const usernameRegex = /^(?=.*[A-Za-z])[A-Za-z\d]{6,16}$/;
 const passRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%_*#?&]{8,32}$/;
+const mailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+const nameRegex = /^[A-Za-z\s\d]{3,64}$/;
+const sizeRegex = /^[A-Za-z\s\d]{1,16}$/;
+const uniqueRegex = /^[A-Za-z\d]{3,16}$/;
 
 export const validateLoginInput = (
   username: string,
@@ -40,8 +44,7 @@ export const validateCreateUserInput = (
   if (email.trim() === '') {
     errors.email = 'Email must not be empty';
   } else {
-    const regEx = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
-    if (!email.match(regEx)) {
+    if (!email.match(mailRegex)) {
       errors.email = 'Email must be a valid email address';
     }
   }
@@ -73,6 +76,53 @@ export const validatePasswordInput = (password: string): ValidationResult => {
   if (!password.match(passRegex)) {
     errors.password =
       'Password should contain at least one number and letter, minimum 8 and max 32 characters.';
+  }
+
+  return { valid: Object.keys(errors).length < 1, errors };
+};
+
+export const validateSizeInput = (
+  name: string,
+  values: string[],
+): ValidationResult => {
+  const errors: { name?: string; values?: string } = {};
+
+  if (!name.match(nameRegex)) {
+    errors.name =
+      'Name should contain minimum 3 and max 64 characters. Only letters, numbers and spaces are allowed.';
+  }
+
+  const valuesReduced = values.reduce((acc: string[], val) => {
+    if (!val.match(sizeRegex)) {
+      acc.push(`${val} is incorrect.`);
+    }
+
+    return acc;
+  }, []);
+
+  if (valuesReduced.length > 0) {
+    errors.values =
+      valuesReduced.join(' ') +
+      'Size should contain minimum 1 and max 16 characters. Only letters, numbers and spaces are allowed.';
+  }
+
+  return { valid: Object.keys(errors).length < 1, errors };
+};
+
+export const validateIngredientInput = (
+  name: string,
+  uniqueName: string,
+): ValidationResult => {
+  const errors: { name?: string; uniqueName?: string } = {};
+
+  if (!name.match(nameRegex)) {
+    errors.name =
+      'Name should contain minimum 3 and max 64 characters. Only letters, numbers and spaces are allowed.';
+  }
+
+  if (!uniqueName.match(uniqueRegex)) {
+    errors.uniqueName =
+      'Name should contain minimum 3 and max 16 characters. Only letters and number are allowed.';
   }
 
   return { valid: Object.keys(errors).length < 1, errors };
