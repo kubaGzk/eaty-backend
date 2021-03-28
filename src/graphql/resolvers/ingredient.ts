@@ -40,23 +40,29 @@ export default {
         throw new Error(`${message}`);
       }
 
-      let sizeDocument: SizeDoc | null;
+      let sizeObj: SizeDoc | null;
+      let existingIng;
 
       try {
-        sizeDocument = await SizeModel.findById(size);
+        existingIng = await IngredientModel.find({ uniqueName });
+        sizeObj = await SizeModel.findById(size);
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
 
-      if (!sizeDocument) {
-        throw new Error('Cannot find provided size.');
+      if (existingIng) {
+        throw new Error('Unique name of ingredient is already used.');
+      }
+
+      if (!sizeObj) {
+        throw new Error('Could not find provided size.');
       }
 
       const sizeCheck = price.reduce(
         (acc, prc) => {
           return acc.filter((val) => val !== prc.size);
         },
-        [...sizeDocument.toObject().values],
+        [...sizeObj.toObject().values],
       );
 
       if (sizeCheck.length > 0) {
@@ -67,6 +73,7 @@ export default {
 
       const ingredient = new IngredientModel({ name, size, uniqueName, price });
       let returnedIngredient: IngredientDoc | null;
+      
       try {
         await ingredient.save();
         returnedIngredient = await IngredientModel.findById(ingredient.id)

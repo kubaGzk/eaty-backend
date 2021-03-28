@@ -36,7 +36,7 @@ export default gql`
   type Category {
     name: String!
     size: Size!
-    basePrice: Float!
+    basePrice: [Price!]
     baseIngredients: [Ingredient!]
     options: [Option!]
     availableSides: [Item!]
@@ -67,10 +67,11 @@ export default gql`
   type Item {
     name: String!
     description: String!
-    category: ID!
+    category: Category!
     size: Size!
     basePrice: [Price!]!
-    ingriedients: [Ingredient!]!
+    price: [Price!]!
+    ingredients: [Ingredient!]!
     itemOptions: [Option!]
     availableSides: [Item!]
     customComposition: ID
@@ -87,15 +88,14 @@ export default gql`
   }
 
   type CustomComposition {
-    ingredients: [Ingredient!]!
+    id: ID!
+    name: String!
+    ingredients: [CustomCompositionIngredient!]!
     items: [ID]!
     size: Size!
   }
   type CustomCompositionIngredient {
-    name: String!
-    price: Price!
-    size: Size!
-    uniqueName: ID!
+    ingredient: Ingredient!
     removable: Boolean!
     group: String
     maxNumber: Int
@@ -103,14 +103,16 @@ export default gql`
   }
 
   input OptionInput {
-    mandatory: Boolean
     name: String!
-    values: [OptionValuesInput!]!
+    mandatory: Boolean!
+    multi: Boolean!
+    maxSelect: Int!
+    values: [OptionValuesInput!]
   }
 
   input OptionValuesInput {
     value: String!
-    priceChange: Int
+    priceChange: Int!
   }
 
   input PriceInput {
@@ -118,33 +120,17 @@ export default gql`
     price: Float!
   }
 
-  input ItemInput {
-    name: String!
-    description: String
-    category: ID!
-    size: [String!]!
-    ingriedients: [String!]
-    itemOptions: [OptionInput!]
-    availableSides: [String!]
-    price: PriceInput!
-    customComposition: ID
-  }
-
-  input UpdateItemInput {
-    name: String
-    description: String
-    category: ID
-    size: [String]
-    ingriedients: [String!]
-    itemOptions: [OptionInput!]
-    availableSides: [String!]
-    price: PriceInput
-    customComposition: ID
-  }
 
   input UpdateSizeValue {
     oldValue: String
     newValue: String
+  }
+
+  input CustomCompositionIngredientInput {
+    ingredient: ID!
+    removable: Boolean!
+    group: String!
+    maxNumber: Int!
   }
 
   type Query {
@@ -194,8 +180,12 @@ export default gql`
 
     createCategory(
       name: String!
-      options: [OptionInput!]
       customComposition: ID
+      size: ID
+      basePrice: [PriceInput!]
+      baseIngredients: [ID!]
+      options: [OptionInput!]
+      availableSides: [ID!]
     ): Category!
     updateCategory(
       id: ID!
@@ -205,17 +195,32 @@ export default gql`
     ): Category!
     deleteCategory(id: ID): String!
 
-    createItem(itemInput: ItemInput): Item!
-    updateItem(itemId: ID!, itemInput: UpdateItemInput): Item!
+    createItem(
+      name: String!
+      description: String
+      customComposition: ID
+      category: ID!
+      noInheritFromCategory: Boolean!
+      size: ID
+      basePrice: [PriceInput!]
+      ingredients: [ID!]
+      itemOptions: [OptionInput!]
+      availableSides: [ID!]
+    ): Item!
+    updateItem(itemId: ID!): Item!
     deleteItem(id: ID!): String!
 
     createCustomComposition(
-      items: [ID!]
-      ingredients: [ID!]!
+      name: String!
+      groups: [String!]!
+      size: ID!
+      ingredients: [CustomCompositionIngredientInput!]!
     ): CustomComposition!
     updateCustomComposition(
-      items: [ID!]
-      ingredients: [ID!]!
+      name: String!
+      groups: [String!]!
+      size: ID!
+      ingredients: [CustomCompositionIngredientInput!]!
     ): CustomComposition!
     deleteCustomComposition(id: ID!): String!
   }

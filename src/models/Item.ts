@@ -3,7 +3,7 @@ import { ItemDoc } from '../util/types';
 
 const itemSchema: Schema = new Schema({
   name: { type: String, require: true },
-  description: { type: String, require: true },
+  description: { type: String },
   category: { type: Schema.Types.ObjectId, ref: 'Category' },
   noInheritFromCategory: { type: Boolean, require: true },
   size: { type: Schema.Types.ObjectId, ref: 'Size' },
@@ -16,12 +16,12 @@ const itemSchema: Schema = new Schema({
   ingredients: [{ type: Schema.Types.ObjectId, ref: 'Ingredient' }],
   itemOptions: [
     {
-      mandatory: { type: Boolean, require: true },
-      name: { type: String, require: true },
+      mandatory: { type: Boolean },
+      name: { type: String },
       values: [
         {
-          value: String,
-          priceChange: Number,
+          value: { type: String },
+          priceChange: { type: Number },
         },
       ],
     },

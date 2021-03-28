@@ -2,7 +2,8 @@ import { model, Schema } from 'mongoose';
 import { CustomCompositionDoc } from '../util/types';
 
 const ccSchema: Schema = new Schema({
-  size: { type: Schema.Types.ObjectId, ref: 'Size' },
+  name: { type: String, require: true },
+  size: { type: Schema.Types.ObjectId, ref: 'Size', require: true },
   groups: [{ type: String, require: true }],
   ingredients: [
     {
@@ -16,7 +17,7 @@ const ccSchema: Schema = new Schema({
       maxNumber: { type: Number, require: true },
     },
   ],
-  category: [{ type: Schema.Types.ObjectId, ref: 'Category' }],
+  categories: [{ type: Schema.Types.ObjectId, ref: 'Category' }],
   items: [{ type: Schema.Types.ObjectId, ref: 'Item' }],
 });
 

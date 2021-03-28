@@ -1,8 +1,8 @@
 import { Document } from 'mongoose';
 
 type SizeType = string | Size;
-type ItemType = string[] | Item[];
-type IngredientType = string[] | Ingredient[];
+type ItemType = string[] | Item[] | [];
+type IngredientType = string | Ingredient;
 type CategoryType = string[] | Category[];
 type CustomCompositionType = string | CustomComposition;
 
@@ -30,20 +30,22 @@ export interface Price {
   price: number;
 }
 
-export interface Options {
-  mandatory: boolean;
+export interface Option {
   name: string;
+  mandatory: boolean;
+  multi: boolean;
+  maxSelect: number;
   values: { value: string; priceChange: number }[];
 }
 
 export interface Category {
   name: string;
   size: SizeType;
-  Price: Price[];
-  baseIngredients: ItemType;
-  options: Options[];
+  basePrice?: Price[];
+  baseIngredients?: ItemType;
+  options?: Option[];
   availableSides?: ItemType;
-  items: ItemType;
+  items?: ItemType;
   customComposition?: CustomCompositionType;
   _id?: string;
   id?: string;
@@ -54,6 +56,7 @@ export interface CategoryDoc extends Document, Category {
 }
 
 export interface CustomComposition {
+  name: string;
   size: SizeType;
   groups: string[];
   ingredients: {
@@ -61,9 +64,11 @@ export interface CustomComposition {
     removable: boolean;
     group: string;
     maxNumber: number;
-  };
-  category: CategoryType;
-  items: ItemType;
+  }[];
+  categories?: CategoryType;
+  items?: ItemType;
+  _id?: string;
+  id?: string;
 }
 
 export interface CustomCompositionDoc extends Document, CustomComposition {
@@ -73,13 +78,14 @@ export interface CustomCompositionDoc extends Document, CustomComposition {
 
 export interface Item {
   name: string;
-  description: string;
+  description?: string;
   category: string;
   noInheritFromCategory?: boolean;
-  size: string[] | object[];
-  Price: Price[];
+  size: SizeType;
+  basePrice?: Price[];
+  price?: Price[];
   ingredients: string[];
-  itemOptions: Options[];
+  itemOptions: Option[];
   availableSides?: string[];
   customComposition?: string;
   _id?: string;
