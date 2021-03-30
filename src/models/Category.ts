@@ -10,7 +10,12 @@ const categorySchema: Schema = new Schema({
       price: { type: Number, require: true },
     },
   ],
-  baseIngredients: [{ type: Schema.Types.ObjectId, ref: 'Ingredient' }],
+  baseIngredients: [
+    {
+      ingredient: { type: Schema.Types.ObjectId, ref: 'Ingredient' },
+      number: { type: Number },
+    },
+  ],
   options: [
     {
       mandatory: { type: Boolean },

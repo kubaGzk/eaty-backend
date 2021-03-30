@@ -1,12 +1,16 @@
 import { startSession } from 'mongoose';
 import CategoryModel from '../../models/Category';
-import CustomCompositionModel from '../../models/CustomComposition';
-import IngredientModel from '../../models/Ingredient';
-import SizeModel from '../../models/Size';
 import ac from '../../models/UserRoles';
 import checkAuth from '../../util/check-auth';
 import { Category, CategoryDoc, Option } from '../../util/types';
-import { sizeCheck } from '../../util/util-func';
+import {
+  customCompositionCheck,
+  customCompositionRulesCheck,
+  ingredientsCheck,
+  itemCheck,
+  priceSizeCheck,
+  sizeCheck,
+} from '../../util/util-func';
 import { validateCategoryInput } from '../../util/validators';
 
 export default {
@@ -22,7 +26,7 @@ export default {
         customComposition?: string;
         size?: string;
         basePrice?: { size: string; price: number }[];
-        baseIngredients?: string[];
+        baseIngredients?: { ingredient: string; number: number }[];
         options?: Option[];
         availableSides?: string[];
       },
@@ -42,7 +46,7 @@ export default {
         name: string;
         customComposition?: string;
         size?: string;
-        baseIngredients?: string[];
+        baseIngredients?: { ingredient: string; number: number }[];
         basePrice?: { size: string; price: number }[];
         options?: Option[];
         availableSides?: string[];
@@ -66,71 +70,36 @@ export default {
       }
 
       let sizeObj;
-      let customComp;
+      let customCompObj;
 
       if (customComposition) {
-        try {
-          customComp = await CustomCompositionModel.findById(
-            customComposition,
-          ).exec();
-        } catch (err) {
-          throw new Error(`Unexpected error. ${err}`);
-        }
+        //CUSTOM COMPOSITION FLOW
+        customCompObj = await customCompositionCheck(customComposition);
 
-        if (!customComp) {
-          throw new Error('Could not find Custom Composition for provided ID.');
+        if (baseIngredients) {
+          customCompositionRulesCheck(customCompObj, baseIngredients);
+          catObj.baseIngredients = baseIngredients;
         }
+        sizeObj = await sizeCheck(customCompObj.size.toString());
 
-        try {
-          sizeObj = await SizeModel.findById(customComp.size).exec();
-        } catch (err) {
-          throw new Error(`Unexpected error. ${err}`);
-        }
-
-        catObj.customComposition = customComp.id;
-        catObj.size = customComp.size as string;
+        catObj.customComposition = customCompObj.id;
+        catObj.size = sizeObj.id;
       } else if (size) {
-        try {
-          sizeObj = await SizeModel.findById(size).exec();
-        } catch (err) {
-          throw new Error(`Unexpected error. ${err}`);
+        //NON CUSTOM COMPOSITION FLOW
+        sizeObj = await sizeCheck(size);
+        catObj.size = sizeObj.id;
+
+        if (baseIngredients) {
+          await ingredientsCheck(baseIngredients, size);
+          catObj.baseIngredients = baseIngredients;
         }
       } else {
         throw new Error('Please specify either Custom Composition or Size.');
       }
 
-      if (!sizeObj) {
-        throw new Error('Could not find Size for provided ID.');
-      }
-      catObj.size = sizeObj.id;
-
       if (basePrice) {
-        sizeCheck(basePrice, sizeObj);
-
+        priceSizeCheck(basePrice, sizeObj!);
         catObj.basePrice = basePrice;
-      }
-
-      if (baseIngredients) {
-        for (const ing of baseIngredients) {
-          let ingObj;
-          try {
-            ingObj = await IngredientModel.findById(ing).exec();
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
-          }
-
-          if (!ingObj) {
-            throw new Error('One of the base ingredients could not be found.');
-          }
-
-          if (ingObj.size.toString() !== catObj.size) {
-            throw new Error(
-              'One of the base ingredients has different Size type.',
-            );
-          }
-        }
-
-        catObj.baseIngredients = baseIngredients;
       }
 
       if (options) {
@@ -139,16 +108,7 @@ export default {
 
       if (availableSides) {
         for (const side of availableSides) {
-          let sideObj;
-          try {
-            sideObj = await IngredientModel.findById(side).exec();
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
-          }
-
-          if (!sideObj) {
-            throw new Error('One of the sides could not be found.');
-          }
+          await itemCheck(side);
         }
 
         catObj.availableSides = availableSides;
@@ -156,26 +116,28 @@ export default {
 
       const category = new CategoryModel(catObj);
       let returnedCat: CategoryDoc | null;
+
       try {
         const sess = await startSession();
         sess.startTransaction();
 
         await category.save({ session: sess });
 
-        if (customComp) {
+        if (customCompObj) {
           const newCats = [];
-          for (const cat of customComp?.categories!) {
+          for (const cat of customCompObj?.categories!) {
             newCats.push(cat.toString());
           }
 
-          customComp.items = [...newCats, category.id];
-          await customComp.save({ session: sess });
+          customCompObj.categories = [...newCats, category.id];
+          await customCompObj.save({ session: sess });
         }
 
         await sess.commitTransaction();
 
         returnedCat = await CategoryModel.findById(category.id)
           .populate('size')
+          .populate('baseIngredients.ingredient')
           .exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);

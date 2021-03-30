@@ -1,11 +1,15 @@
-import CategoryModel from '../../models/Category';
-import CustomCompositionModel from '../../models/CustomComposition';
-import IngredientModel from '../../models/Ingredient';
 import ItemModel from '../../models/Item';
-import SizeModel from '../../models/Size';
 import ac from '../../models/UserRoles';
 import checkAuth from '../../util/check-auth';
-import { sizeCheck } from '../../util/util-func';
+import {
+  categoryCheck,
+  customCompositionRulesCheck,
+  customCompositionCheck,
+  ingredientsCheck,
+  priceSizeCheck,
+  sizeCheck,
+  itemCheck,
+} from '../../util/util-func';
 import { validateItemInput } from '../../util/validators';
 import { ItemDoc, Item } from '../../util/types';
 import { startSession } from 'mongoose';
@@ -21,14 +25,14 @@ export default {
         noInheritFromCategory?: boolean;
         size?: string;
         basePrice?: { size: string; price: number }[];
-        ingredients: string[];
+        ingredients: { ingredient: string; number: number }[];
         itemOptions: {
           mandatory: boolean;
           name: string;
           values: { value: string; priceChange: number }[];
         }[];
         availableSides?: string[];
-        customComposition: string[];
+        customComposition: string;
       },
       context: any,
     ): Promise<Item> => {
@@ -44,6 +48,23 @@ export default {
         availableSides,
         customComposition,
       } = args;
+
+      const itemObj: {
+        name: string;
+        description?: string;
+        noInheritFromCategory: boolean;
+        category?: string;
+        size?: string;
+        basePrice?: { size: string; price: number }[];
+        ingredients?: { ingredient: string; number: number }[];
+        itemOptions?: {
+          mandatory: boolean;
+          name: string;
+          values: { value: string; priceChange: number }[];
+        }[];
+        customComposition?: string;
+        availableSides?: string[];
+      } = { name, noInheritFromCategory: !!noInheritFromCategory };
 
       const { role: userRole } = await checkAuth(context);
 
@@ -66,133 +87,35 @@ export default {
         throw new Error(`${message}`);
       }
 
-      const itemObj: {
-        name: string;
-        description?: string;
-        noInheritFromCategory: boolean;
-        category?: string;
-        size?: string;
-        basePrice?: { size: string; price: number }[];
-        ingredients?: string[];
-        itemOptions?: {
-          mandatory: boolean;
-          name: string;
-          values: { value: string; priceChange: number }[];
-        }[];
-        customComposition?: string;
-        availableSides?: string[];
-      } = { name, noInheritFromCategory: !!noInheritFromCategory };
-
       //CATEGORY CHECK
-      let catObj;
+      const catObj = await categoryCheck(category);
 
-      try {
-        catObj = await CategoryModel.findById(category).exec();
-      } catch (err) {
-        throw new Error(`Unexpected error. ${err}`);
-      }
+      itemObj.category = catObj.id;
 
-      if (!catObj) {
-        throw new Error('Could not find category for provided ID.');
-      }
-
-      itemObj.category = category;
-
-      let customComp;
+      let customCompObj;
+      let sizeObj;
 
       if (noInheritFromCategory) {
-        //NON INHERITED FLOW - CUSTOM COMPOSITION OR SIZE BASED
-        let sizeObj;
+        //NON INHERITED FLOW
 
         if (customComposition) {
           //CUSTOM COMPOSITION ITEM
 
-          //CUSTOM COMPOSITION CHECK
+          customCompObj = await customCompositionCheck(customComposition);
 
-          try {
-            customComp = await CustomCompositionModel.findById(
-              customComposition,
-            ).exec();
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
-          }
+          await customCompositionRulesCheck(customCompObj, ingredients, true);
 
-          if (!customComp) {
-            throw new Error(
-              'Could not find Custom Composition for provided ID.',
-            );
-          }
-
-          //INGREDIENT CHECK
-          for (const ing of ingredients) {
-            let ingObj;
-            try {
-              ingObj = IngredientModel.findById(ing);
-            } catch (err) {
-              throw new Error(`Unexpected error. ${err}`);
-            }
-            if (!ingObj) {
-              throw new Error('Could not find one of provided ingredients');
-            }
-
-            const ind = customComp.ingredients.findIndex(
-              (ccIng) => ccIng.ingredient.toString() === ing,
-            );
-            if (ind < 0) {
-              throw new Error(
-                'One of the ingredients is not part of provided Custom Composition.',
-              );
-            }
-          }
-
-          //SIZE CHECK
-          try {
-            sizeObj = await SizeModel.findById(customComp.size).exec();
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
-          }
-
-          if (!sizeObj) {
-            throw new Error('Could not find Size for provided ID.');
-          }
+          sizeObj = await sizeCheck(customCompObj.size.toString());
 
           itemObj.ingredients = ingredients;
-          itemObj.customComposition = customComp.id;
-          itemObj.size = customComp.size as string;
+          itemObj.customComposition = customCompObj.id;
+          itemObj.size = sizeObj.id;
         } else if (size) {
           //NON CUSTOM COMPOSITION ITEM
 
-          //INGREDIENT CHECK
-          for (const ing of ingredients) {
-            let ingObj;
+          await ingredientsCheck(ingredients, size);
 
-            try {
-              ingObj = await IngredientModel.findById(ing).exec();
-            } catch (err) {
-              throw new Error(`Unexpected error. ${err}`);
-            }
-
-            if (!ingObj) {
-              throw new Error('Could not find one of provided ingredients');
-            }
-
-            if (ingObj?.size.toString() !== size) {
-              throw new Error(
-                'One of the ingredients has different Size than provided.',
-              );
-            }
-          }
-
-          //SIZE CHECK
-          try {
-            sizeObj = await SizeModel.findById(size).exec();
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
-          }
-
-          if (!sizeObj) {
-            throw new Error('Could not find Size for provided ID.');
-          }
+          sizeObj = await sizeCheck(size);
 
           itemObj.ingredients = ingredients;
           itemObj.size = sizeObj.id as string;
@@ -206,46 +129,49 @@ export default {
           );
         }
 
-        sizeCheck(basePrice, sizeObj);
+        priceSizeCheck(basePrice, sizeObj);
         itemObj.basePrice = basePrice;
       } else {
         //INHERITED FLOW
 
-        //INGREDIENT CHECK
-        for (const ing of ingredients) {
-          let ingObj;
+        if (catObj.customComposition) {
+          //INHERITED CUSTOM COMPOSITION
 
-          try {
-            ingObj = await IngredientModel.findById(ing).exec();
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
+          customCompObj = await customCompositionCheck(
+            catObj.customComposition.toString(),
+          );
+
+          const ings: { ingredient: string; number: number }[] = [
+            ...ingredients,
+          ];
+
+          for (const catIng of catObj.baseIngredients!) {
+            ings.push({
+              ingredient: catIng.ingredient.toString(),
+              number: parseInt(catIng.number.toString()),
+            });
           }
 
-          if (!ingObj) {
-            throw new Error('Could not find one of provided ingredients');
-          }
+          await customCompositionRulesCheck(customCompObj, ings, true);
 
-          if (ingObj?.size.toString() !== catObj.size.toString()) {
-            throw new Error(
-              'One of the ingredients has different Size than selected Category.',
-            );
-          }
+          sizeObj = await sizeCheck(customCompObj.size.toString());
+
+          itemObj.ingredients = ingredients;
+          itemObj.customComposition = customCompObj.id;
+          itemObj.size = sizeObj.id;
+        } else {
+          //INHERITED SIZE
+
+          await ingredientsCheck(ingredients, catObj.size.toString());
+
+          sizeObj = await sizeCheck(catObj.size.toString());
+
+          itemObj.ingredients = ingredients;
+          itemObj.size = sizeObj.id as string;
         }
 
-        //BASE PRICE CHECK CHECK
         if (basePrice) {
-          let sizeObj;
-          try {
-            sizeObj = await SizeModel.findById(catObj.size).exec();
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
-          }
-
-          if (!sizeObj) {
-            throw new Error('Could not find Size for provided ID.');
-          }
-
-          sizeCheck(basePrice, sizeObj);
+          priceSizeCheck(basePrice, sizeObj);
           itemObj.basePrice = basePrice;
         } else if (catObj.basePrice?.length! < 1) {
           throw new Error(
@@ -265,18 +191,9 @@ export default {
       }
 
       if (availableSides) {
-        let sideObj;
         for (const side of availableSides) {
-          try {
-            sideObj = ItemModel.findById(side);
-          } catch (err) {
-            throw new Error(`Unexpected error. ${err}`);
-          }
-          if (!sideObj) {
-            throw new Error('Could not find one of provided side dishes.');
-          }
+          await itemCheck(side);
         }
-
         itemObj.availableSides = availableSides;
       }
 
@@ -301,14 +218,14 @@ export default {
         await catObj.save({ session: sess });
 
         //SAVE NEW CUSTOM COMPOSITION ITEM LIST
-        if (customComp) {
+        if (customCompObj) {
           const newCCItems = [];
-          for (const it of customComp?.items!) {
+          for (const it of customCompObj?.items!) {
             newCCItems.push(it.toString());
           }
 
-          customComp.items = [...newCCItems, item.id];
-          await customComp.save({ session: sess });
+          customCompObj.items = [...newCCItems, item.id];
+          await customCompObj.save({ session: sess });
         }
 
         await sess.commitTransaction();

@@ -13,7 +13,12 @@ const itemSchema: Schema = new Schema({
       price: { type: Number, require: true },
     },
   ],
-  ingredients: [{ type: Schema.Types.ObjectId, ref: 'Ingredient' }],
+  ingredients: [
+    {
+      ingredient: { type: Schema.Types.ObjectId, ref: 'Ingredient' },
+      number: { type: Number },
+    },
+  ],
   itemOptions: [
     {
       mandatory: { type: Boolean },

@@ -1,9 +1,9 @@
-import { Ingredient, IngredientDoc, SizeDoc } from '../../util/types';
-import SizeModel from '../../models/Size';
+import { Ingredient, IngredientDoc } from '../../util/types';
 import IngredientModel from '../../models/Ingredient';
 import { validateIngredientInput } from '../../util/validators';
 import checkAuth from '../../util/check-auth';
 import ac from '../../models/UserRoles';
+import { sizeCheck } from '../../util/util-func';
 
 export default {
   Query: {
@@ -40,12 +40,11 @@ export default {
         throw new Error(`${message}`);
       }
 
-      let sizeObj: SizeDoc | null;
+      const sizeObj = await sizeCheck(size);
       let existingIng;
 
       try {
-        existingIng = await IngredientModel.find({ uniqueName });
-        sizeObj = await SizeModel.findById(size);
+        existingIng = await IngredientModel.findOne({ uniqueName });
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
@@ -54,26 +53,22 @@ export default {
         throw new Error('Unique name of ingredient is already used.');
       }
 
-      if (!sizeObj) {
-        throw new Error('Could not find provided size.');
-      }
-
-      const sizeCheck = price.reduce(
+      const priceSizeCheck = price.reduce(
         (acc, prc) => {
           return acc.filter((val) => val !== prc.size);
         },
         [...sizeObj.toObject().values],
       );
 
-      if (sizeCheck.length > 0) {
+      if (priceSizeCheck.length > 0) {
         throw new Error(
-          `Following sizes were not provided: ${sizeCheck.join('')}`,
+          `Following sizes were not provided: ${priceSizeCheck.join('')}`,
         );
       }
 
       const ingredient = new IngredientModel({ name, size, uniqueName, price });
       let returnedIngredient: IngredientDoc | null;
-      
+
       try {
         await ingredient.save();
         returnedIngredient = await IngredientModel.findById(ingredient.id)

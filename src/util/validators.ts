@@ -123,7 +123,7 @@ export const validateIngredientInput = (
 
   if (!uniqueName.match(uniqueRegex)) {
     errors.uniqueName =
-      'Name should contain minimum 3 and max 16 characters. Only letters and number are allowed.';
+      'Unique Name should contain minimum 3 and max 16 characters. Only letters and number are allowed.';
   }
 
   return { valid: Object.keys(errors).length < 1, errors };
@@ -211,7 +211,7 @@ export const validateItemInput = (
 
   if (description && !description.match(descriptionRegex)) {
     errors.description =
-      'Name should contain max 64 characters. Only letters, numbers and spaces are allowed.';
+      'Description should contain max 64 characters. Only letters, numbers and spaces are allowed.';
   }
 
   if (itemOptions) {

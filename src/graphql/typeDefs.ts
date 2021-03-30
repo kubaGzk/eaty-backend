@@ -37,12 +37,17 @@ export default gql`
     name: String!
     size: Size!
     basePrice: [Price!]
-    baseIngredients: [Ingredient!]
+    baseIngredients: [CategoryIngredient!]
     options: [Option!]
     availableSides: [Item!]
     customComposition: ID
     items: [ID!]!
     id: ID!
+  }
+
+  type CategoryIngredient {
+    ingredient: Ingredient
+    number: Int
   }
 
   type Option {
@@ -87,12 +92,20 @@ export default gql`
     id: ID!
   }
 
+  type CustomCompositionGroup {
+    name: String!
+    minIng: Int!
+    maxIng: Int!
+    maxTotal: Int!
+  }
+
   type CustomComposition {
     id: ID!
     name: String!
     ingredients: [CustomCompositionIngredient!]!
     items: [ID]!
     size: Size!
+    groups: [CustomCompositionGroup!]!
   }
   type CustomCompositionIngredient {
     ingredient: Ingredient!
@@ -120,7 +133,6 @@ export default gql`
     price: Float!
   }
 
-
   input UpdateSizeValue {
     oldValue: String
     newValue: String
@@ -131,6 +143,18 @@ export default gql`
     removable: Boolean!
     group: String!
     maxNumber: Int!
+  }
+
+  input CustomCompositionGroupInput {
+    name: String!
+    minIng: Int!
+    maxIng: Int!
+    maxTotal: Int!
+  }
+
+  input IngredientInput{
+    ingredient: ID!
+    number: Int!
   }
 
   type Query {
@@ -183,7 +207,7 @@ export default gql`
       customComposition: ID
       size: ID
       basePrice: [PriceInput!]
-      baseIngredients: [ID!]
+      baseIngredients: [IngredientInput!]
       options: [OptionInput!]
       availableSides: [ID!]
     ): Category!
@@ -203,7 +227,7 @@ export default gql`
       noInheritFromCategory: Boolean!
       size: ID
       basePrice: [PriceInput!]
-      ingredients: [ID!]
+      ingredients: [IngredientInput!]
       itemOptions: [OptionInput!]
       availableSides: [ID!]
     ): Item!
@@ -212,7 +236,7 @@ export default gql`
 
     createCustomComposition(
       name: String!
-      groups: [String!]!
+      groups: [CustomCompositionGroupInput!]!
       size: ID!
       ingredients: [CustomCompositionIngredientInput!]!
     ): CustomComposition!

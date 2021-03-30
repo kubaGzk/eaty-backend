@@ -4,7 +4,14 @@ import { CustomCompositionDoc } from '../util/types';
 const ccSchema: Schema = new Schema({
   name: { type: String, require: true },
   size: { type: Schema.Types.ObjectId, ref: 'Size', require: true },
-  groups: [{ type: String, require: true }],
+  groups: [
+    {
+      name: { type: String, require: true },
+      minIng: { type: Number, require: true },
+      maxIng: { type: Number, require: true },
+      maxTotal: { type: Number, require: true },
+    },
+  ],
   ingredients: [
     {
       ingredient: {

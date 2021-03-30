@@ -2,7 +2,9 @@ import { Document } from 'mongoose';
 
 type SizeType = string | Size;
 type ItemType = string[] | Item[] | [];
-type IngredientType = string | Ingredient;
+type IngredientType =
+  | { ingredient: string; number: number }
+  | { ingredient: Ingredient; number: number };
 type CategoryType = string[] | Category[];
 type CustomCompositionType = string | CustomComposition;
 
@@ -42,7 +44,7 @@ export interface Category {
   name: string;
   size: SizeType;
   basePrice?: Price[];
-  baseIngredients?: ItemType;
+  baseIngredients?: IngredientType[];
   options?: Option[];
   availableSides?: ItemType;
   items?: ItemType;
@@ -58,9 +60,9 @@ export interface CategoryDoc extends Document, Category {
 export interface CustomComposition {
   name: string;
   size: SizeType;
-  groups: string[];
+  groups: { name: string; minIng: number; maxIng: number; maxTotal: number }[];
   ingredients: {
-    ingredient: IngredientType;
+    ingredient: string | Ingredient;
     removable: boolean;
     group: string;
     maxNumber: number;
@@ -84,7 +86,7 @@ export interface Item {
   size: SizeType;
   basePrice?: Price[];
   price?: Price[];
-  ingredients: string[];
+  ingredients: IngredientType[];
   itemOptions: Option[];
   availableSides?: string[];
   customComposition?: string;

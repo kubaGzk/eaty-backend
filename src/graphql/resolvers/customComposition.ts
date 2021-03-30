@@ -1,10 +1,9 @@
 import ac from '../../models/UserRoles';
 import checkAuth from '../../util/check-auth';
 import { CustomComposition, CustomCompositionDoc } from '../../util/types';
-import SizeModel from '../../models/Size';
-import IngredientModel from '../../models/Ingredient';
 import CustomCompositionModel from '../../models/CustomComposition';
 import { validateCustomCompositionInput } from '../../util/validators';
+import { ingredientsCheck, sizeCheck } from '../../util/util-func';
 
 export default {
   Query: {
@@ -16,7 +15,12 @@ export default {
       _: any,
       args: {
         name: string;
-        groups: string[];
+        groups: {
+          name: string;
+          minIng: number;
+          maxIng: number;
+          maxTotal: number;
+        }[];
         size: string;
         ingredients: {
           ingredient: string;
@@ -37,7 +41,10 @@ export default {
         throw new Error('Not authorized to perform this action.');
       }
 
-      const { valid, errors } = validateCustomCompositionInput(name, groups);
+      const { valid, errors } = validateCustomCompositionInput(
+        name,
+        groups.map((gr) => gr.name),
+      );
 
       if (!valid) {
         const message = Object.keys(errors)
@@ -46,43 +53,17 @@ export default {
         throw new Error(`${message}`);
       }
 
-      let sizeObj;
-
-      try {
-        sizeObj = await SizeModel.findById(size).exec();
-      } catch (err) {
-        throw new Error(`Unexpected error. ${err}`);
-      }
-
-      if (!sizeObj) {
-        throw new Error('Could not find provided size.');
-      }
+      await sizeCheck(size);
+      await ingredientsCheck(ingredients, size);
 
       for (const ing of ingredients) {
-        if (groups.indexOf(ing.group) < 0) {
+        if (groups.findIndex((gr) => gr.name === ing.group) < 0) {
           throw new Error('One of the ingredients has incorrect group.');
         }
 
         if (ing.maxNumber < 1) {
           throw new Error(
             'One of the ingredients has maximum number less than one.',
-          );
-        }
-
-        let existIng;
-        try {
-          existIng = await IngredientModel.findById(ing.ingredient).exec();
-        } catch (err) {
-          throw new Error(`Unexpected error. ${err}`);
-        }
-
-        if (!existIng) {
-          throw new Error('One of the ingredients could not be found.');
-        }
-
-        if (existIng.size.toString() !== size) {
-          throw new Error(
-            'One of the ingredients is using different Size than Custom Composition.',
           );
         }
       }
