@@ -15,6 +15,67 @@ import { ItemDoc, Item } from '../../util/types';
 import { startSession } from 'mongoose';
 
 export default {
+  Query: {
+    getItem: async (
+      _: any,
+      args: { id: string },
+      context: any,
+    ): Promise<Item> => {
+      const { id } = args;
+
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('ITEM');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      let returnedItem;
+
+      try {
+        returnedItem = await ItemModel.findById(id)
+          .populate('category')
+          .populate('size')
+          .populate('ingredients.ingredient')
+          .populate('availableSides')
+          .populate('customComposition')
+          .exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      if (!returnedItem) {
+        throw new Error('Could not find Item for provided ID.');
+      }
+
+      return returnedItem.toObject({ getters: true });
+    },
+    getCategories: async (_: any, __: any, context: any): Promise<Item[]> => {
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('ITEM');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      let returnedItems;
+
+      try {
+        returnedItems = await ItemModel.find()
+          .populate('category')
+          .populate('size')
+          .populate('ingredients.ingredient')
+          .populate('availableSides')
+          .exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      return returnedItems.map((itm) => itm.toObject({ getters: true }));
+    },
+  },
   Mutation: {
     createItem: async (
       _: any,
@@ -173,7 +234,9 @@ export default {
         if (basePrice) {
           priceSizeCheck(basePrice, sizeObj);
           itemObj.basePrice = basePrice;
-        } else if (catObj.basePrice?.length! < 1) {
+        } else if (catObj.basePrice) {
+          itemObj.basePrice = catObj.basePrice;
+        } else {
           throw new Error(
             'Base price for this item is required as category does not provide any.',
           );

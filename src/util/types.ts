@@ -84,7 +84,7 @@ export interface Item {
   category: string;
   noInheritFromCategory?: boolean;
   size: SizeType;
-  basePrice?: Price[];
+  basePrice: Price[];
   price?: Price[];
   ingredients: IngredientType[];
   itemOptions: Option[];

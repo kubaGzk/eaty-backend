@@ -7,8 +7,69 @@ import { sizeCheck } from '../../util/util-func';
 
 export default {
   Query: {
-    getIngredient: async () => {},
-    getIngredients: async () => {},
+    getIngredient: async (
+      _: any,
+      args: { id: string },
+      context: any,
+    ): Promise<Ingredient> => {
+      const { id } = args;
+
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('INGREDIENT');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      let returnedIng;
+
+      try {
+        returnedIng = await IngredientModel.findById(id)
+          .populate('size')
+          .exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      if (!returnedIng) {
+        throw new Error('Could not find Ingredient for provided ID.');
+      }
+
+      return returnedIng.toObject({ getters: true });
+    },
+    getIngredients: async (
+      _: any,
+      args: { name?: string; sizeId?: string },
+      context: any,
+    ): Promise<Ingredient[]> => {
+      const { name, sizeId } = args;
+
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('INGREDIENT');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      const filterObj: { name?: any; size?: string } = {};
+
+      if (name) filterObj.name = { $text: name };
+      if (sizeId) filterObj.size = sizeId;
+
+      let returnedIngs;
+
+      try {
+        returnedIngs = await IngredientModel.find(filterObj)
+          .populate('size')
+          .exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      return returnedIngs.map((ing) => ing.toObject({ getters: true }));
+    },
   },
   Mutation: {
     createIngredient: async (

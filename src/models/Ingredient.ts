@@ -6,6 +6,7 @@ const ingredientSchema: Schema = new Schema({
   uniqueName: { type: String, require: true },
   price: [
     {
+      _id: false,
       size: { type: String, require: true },
       price: { type: Number, require: true },
     },

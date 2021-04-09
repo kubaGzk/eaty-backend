@@ -33,34 +33,48 @@ export default gql`
     id: ID!
   }
 
+  type Ingredient {
+    name: String!
+    price: [Price!]!
+    size: Size!
+    uniqueName: ID!
+    id: ID!
+  }
+
+  type NumberedIngredient {
+    ingredient: IngredientNoSize!
+    number: Int
+  }
+
+  type IngredientNoSize {
+    name: String!
+    size: ID!
+    price: [Price!]!
+    uniqueName: ID!
+    id: ID!
+  }
+
   type Category {
     name: String!
     size: Size!
     basePrice: [Price!]
-    baseIngredients: [CategoryIngredient!]
+    baseIngredients: [NumberedIngredient!]
     options: [Option!]
     availableSides: [Item!]
-    customComposition: ID
-    items: [ID!]!
+    customComposition: CustomComposition
+    items: [Item!]!
     id: ID!
-  }
-
-  type CategoryIngredient {
-    ingredient: Ingredient
-    number: Int
   }
 
   type Option {
     mandatory: Boolean
     name: String!
     values: [OptionValues!]!
-    id: ID!
   }
 
   type OptionValues {
     value: String!
     priceChange: Float
-    id: ID!
   }
 
   type Price {
@@ -72,23 +86,15 @@ export default gql`
   type Item {
     name: String!
     description: String!
-    category: Category!
+    category: Category
+    noInheritFromCategory: Boolean
     size: Size!
     basePrice: [Price!]!
     price: [Price!]!
-    ingredients: [Ingredient!]!
+    ingredients: [NumberedIngredient!]
     itemOptions: [Option!]
     availableSides: [Item!]
-    customComposition: ID
-    noInheritFromCategory: Boolean
-    id: ID!
-  }
-
-  type Ingredient {
-    name: String!
-    price: [Price!]!
-    size: Size!
-    uniqueName: ID!
+    customComposition: CustomComposition
     id: ID!
   }
 
@@ -112,7 +118,6 @@ export default gql`
     removable: Boolean!
     group: String
     maxNumber: Int
-    id: ID!
   }
 
   input OptionInput {
@@ -133,7 +138,7 @@ export default gql`
     price: Float!
   }
 
-  input UpdateSizeValue {
+  input UpdateSizeValueInput {
     oldValue: String
     newValue: String
   }
@@ -152,23 +157,26 @@ export default gql`
     maxTotal: Int!
   }
 
-  input IngredientInput{
+  input IngredientInput {
     ingredient: ID!
     number: Int!
   }
 
   type Query {
-    getCategory(categoryId: ID!): Category!
-    getCategories: [Category!]!
+    getCategory(id: ID!): Category!
+    getCategories: [Category!]
 
-    getItem: String
+    getItem(id: ID): String
     getItems(categories: [ID!]!): [Item]!
 
-    getSize: String
-    getSizes: String
+    getSize(id: ID): Size!
+    getSizes: [Size!]
 
-    getIngredient: String
-    getIngredients: String
+    getIngredient(id: ID): Ingredient!
+    getIngredients: [Ingredient!]
+
+    getCustomComposition(id: ID): CustomComposition!
+    getCustomCompositions: [CustomComposition!]
   }
 
   type Mutation {
@@ -184,7 +192,7 @@ export default gql`
     completePasswordReset(token: String, password: String): String!
 
     createSize(name: String!, values: [String!]!): Size!
-    updateSize(name: String, updateValues: [UpdateSizeValue]): Size!
+    updateSize(name: String, updateValues: [UpdateSizeValueInput]): Size!
     deleteSize(id: ID): String!
 
     createIngredient(

@@ -2,7 +2,7 @@ import { startSession } from 'mongoose';
 import CategoryModel from '../../models/Category';
 import ac from '../../models/UserRoles';
 import checkAuth from '../../util/check-auth';
-import { Category, CategoryDoc, Option } from '../../util/types';
+import { Category, Option } from '../../util/types';
 import {
   customCompositionCheck,
   customCompositionRulesCheck,
@@ -15,8 +15,122 @@ import { validateCategoryInput } from '../../util/validators';
 
 export default {
   Query: {
-    getCategory: async () => {},
-    getCategories: async () => {},
+    getCategory: async (
+      _: any,
+      args: { id: string },
+      context: any,
+    ): Promise<Category> => {
+      const { id } = args;
+
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('CATEGORY');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      let returnedCat;
+
+      try {
+        returnedCat = await CategoryModel.findById(id)
+          .populate('size')
+          .populate('baseIngredients.ingredient')
+          .populate({
+            path: 'availableSides',
+            populate: [
+              { path: 'ingredients.ingredient', select: 'price' },
+              {
+                path: 'category',
+                select: 'baseIngredients',
+                populate: {
+                  path: 'baseIngredients.ingredient',
+                  select: 'price',
+                },
+              },
+            ],
+          })
+          .populate({
+            path: 'items',
+            populate: [
+              { path: 'ingredients.ingredient', select: 'price' },
+              {
+                path: 'category',
+                select: 'baseIngredients',
+                populate: {
+                  path: 'baseIngredients.ingredient',
+                  select: 'price',
+                },
+              },
+            ],
+          })
+          .populate('customComposition')
+          .exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      if (!returnedCat) {
+        throw new Error('Could not find Category for provided ID.');
+      }
+
+      return returnedCat.toObject({ getters: true });
+    },
+    getCategories: async (
+      _: any,
+      __: any,
+      context: any,
+    ): Promise<Category[]> => {
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('CATEGORY');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      let returnedCats;
+
+      try {
+        returnedCats = await CategoryModel.find()
+          .populate('size')
+          .populate('baseIngredients.ingredient')
+          .populate({
+            path: 'availableSides',
+            populate: [
+              { path: 'ingredients.ingredient', select: 'price' },
+              {
+                path: 'category',
+                select: 'baseIngredients',
+                populate: {
+                  path: 'baseIngredients.ingredient',
+                  select: 'price',
+                },
+              },
+            ],
+          })
+          .populate({
+            path: 'items',
+            populate: [
+              { path: 'ingredients.ingredient', select: 'price' },
+              {
+                path: 'category',
+                select: 'baseIngredients',
+                populate: {
+                  path: 'baseIngredients.ingredient',
+                  select: 'price',
+                },
+              },
+            ],
+          })
+          .populate('customComposition')
+          .exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      return returnedCats.map((cat) => cat.toObject({ getters: true }));
+    },
   },
   Mutation: {
     createCategory: async (
@@ -115,7 +229,7 @@ export default {
       }
 
       const category = new CategoryModel(catObj);
-      let returnedCat: CategoryDoc | null;
+      let returnedCat;
 
       try {
         const sess = await startSession();
@@ -138,6 +252,9 @@ export default {
         returnedCat = await CategoryModel.findById(category.id)
           .populate('size')
           .populate('baseIngredients.ingredient')
+          .populate('availableSides')
+          .populate('availableSides.category')
+          .populate('customComposition')
           .exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);

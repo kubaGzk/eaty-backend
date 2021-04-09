@@ -6,6 +6,7 @@ const ccSchema: Schema = new Schema({
   size: { type: Schema.Types.ObjectId, ref: 'Size', require: true },
   groups: [
     {
+      _id: false,
       name: { type: String, require: true },
       minIng: { type: Number, require: true },
       maxIng: { type: Number, require: true },
@@ -14,6 +15,7 @@ const ccSchema: Schema = new Schema({
   ],
   ingredients: [
     {
+      _id: false,
       ingredient: {
         type: Schema.Types.ObjectId,
         ref: 'Ingredient',

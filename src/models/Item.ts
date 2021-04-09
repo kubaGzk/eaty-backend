@@ -9,25 +9,25 @@ const itemSchema: Schema = new Schema({
   size: { type: Schema.Types.ObjectId, ref: 'Size' },
   basePrice: [
     {
+      _id: false,
       size: { type: String, require: true },
       price: { type: Number, require: true },
     },
   ],
   ingredients: [
     {
+      _id: false,
       ingredient: { type: Schema.Types.ObjectId, ref: 'Ingredient' },
       number: { type: Number },
     },
   ],
   itemOptions: [
     {
+      _id: false,
       mandatory: { type: Boolean },
       name: { type: String },
       values: [
-        {
-          value: { type: String },
-          priceChange: { type: Number },
-        },
+        { _id: false, value: { type: String }, priceChange: { type: Number } },
       ],
     },
   ],
