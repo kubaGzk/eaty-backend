@@ -6,8 +6,54 @@ import ac from '../../models/UserRoles';
 
 export default {
   Query: {
-    getSize: async () => {},
-    getSizes: async () => {},
+    getSize: async (
+      _: any,
+      args: { id: string },
+      context: any,
+    ): Promise<Size> => {
+      const { id } = args;
+
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('SIZE');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      let returnedSize;
+
+      try {
+        returnedSize = await SizeModel.findById(id).exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      if (!returnedSize) {
+        throw new Error('Could not find Size for provided ID.');
+      }
+
+      return returnedSize.toObject({ getters: true });
+    },
+    getSizes: async (_: any, __: any, context: any): Promise<Size[]> => {
+      const { role: userRole } = await checkAuth(context);
+
+      const { granted } = ac.can(userRole).readAny('SIZE');
+
+      if (!granted) {
+        throw new Error('Not authorized to perform this action.');
+      }
+
+      let returnedSizes;
+
+      try {
+        returnedSizes = await SizeModel.find().exec();
+      } catch (err) {
+        throw new Error(`Unexpected error. ${err}`);
+      }
+
+      return returnedSizes.map((size) => size.toObject({ getters: true }));
+    },
   },
   Mutation: {
     createSize: async (

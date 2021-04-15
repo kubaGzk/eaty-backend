@@ -1,11 +1,27 @@
-import { Ingredient, IngredientDoc } from '../../util/types';
+import { Ingredient } from '../../util/types';
 import IngredientModel from '../../models/Ingredient';
+import SizeModel from '../../models/Size';
 import { validateIngredientInput } from '../../util/validators';
 import checkAuth from '../../util/check-auth';
 import ac from '../../models/UserRoles';
 import { sizeCheck } from '../../util/util-func';
 
 export default {
+  Ingredient: {
+    size: async (parent: Ingredient) => {
+      let size = null;
+
+      if (parent.size) {
+        try {
+          size = await SizeModel.findById(parent.size).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+      }
+
+      return size;
+    },
+  },
   Query: {
     getIngredient: async (
       _: any,
@@ -25,9 +41,7 @@ export default {
       let returnedIng;
 
       try {
-        returnedIng = await IngredientModel.findById(id)
-          .populate('size')
-          .exec();
+        returnedIng = await IngredientModel.findById(id).exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
@@ -40,10 +54,10 @@ export default {
     },
     getIngredients: async (
       _: any,
-      args: { name?: string; sizeId?: string },
+      args: { name?: string; size?: string },
       context: any,
     ): Promise<Ingredient[]> => {
-      const { name, sizeId } = args;
+      const { name, size } = args;
 
       const { role: userRole } = await checkAuth(context);
 
@@ -53,17 +67,19 @@ export default {
         throw new Error('Not authorized to perform this action.');
       }
 
-      const filterObj: { name?: any; size?: string } = {};
+      const filterObj: { $or?: any; size?: string } = {};
 
-      if (name) filterObj.name = { $text: name };
-      if (sizeId) filterObj.size = sizeId;
+      if (name)
+        filterObj.$or = [
+          { name: new RegExp(name, 'gi') },
+          { uniqueName: new RegExp(name, 'gi') },
+        ];
+      if (size) filterObj.size = size;
 
       let returnedIngs;
 
       try {
-        returnedIngs = await IngredientModel.find(filterObj)
-          .populate('size')
-          .exec();
+        returnedIngs = await IngredientModel.find(filterObj).exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
@@ -128,22 +144,14 @@ export default {
       }
 
       const ingredient = new IngredientModel({ name, size, uniqueName, price });
-      let returnedIngredient: IngredientDoc | null;
 
       try {
         await ingredient.save();
-        returnedIngredient = await IngredientModel.findById(ingredient.id)
-          .populate('size')
-          .exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
 
-      if (!returnedIngredient) {
-        throw new Error('Could not find saved Ingredient.');
-      }
-
-      return returnedIngredient.toObject({ getters: true });
+      return ingredient.toObject({ getters: true });
     },
     updateIngredient: async () => {},
     deleteIngredient: async () => {},

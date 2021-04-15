@@ -11,10 +11,236 @@ import {
   itemCheck,
 } from '../../util/util-func';
 import { validateItemInput } from '../../util/validators';
-import { ItemDoc, Item } from '../../util/types';
+import { Item } from '../../util/types';
 import { startSession } from 'mongoose';
+import IngredientModel from '../../models/Ingredient';
+import CategoryModel from '../../models/Category';
+import SizeModel from '../../models/Size';
+import CustomCompositionModel from '../../models/CustomComposition';
 
 export default {
+  Item: {
+    category: async (parent: Item) => {
+      let foundCategory = null;
+
+      if (parent.category) {
+        try {
+          foundCategory = await CategoryModel.findById(parent.category).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+      }
+
+      return foundCategory;
+    },
+    size: async (parent: Item) => {
+      let size = null;
+
+      if (parent.size) {
+        try {
+          size = await SizeModel.findById(parent.size).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+      }
+
+      return size;
+    },
+    price: async (parent: Item) => {
+      const {
+        noInheritFromCategory,
+        basePrice,
+        ingredients,
+        category,
+      } = parent;
+
+      const returnedPrice: { size: string; price: number }[] = [];
+
+      //BASE PRICE
+      for (const bP of basePrice!) {
+        returnedPrice.push({ size: bP.size, price: bP.price });
+      }
+
+      //INGREDIENTS
+      for (const ing of ingredients) {
+        let foundIng;
+        try {
+          foundIng = await IngredientModel.findById(ing.ingredient).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+
+        if (!foundIng) {
+          throw new Error(
+            'Could not found one of ingredients to calculate the price.',
+          );
+        }
+
+        for (const prc of foundIng.price) {
+          const ind = returnedPrice.findIndex((p) => p.size === prc.size);
+          returnedPrice[ind].price += ing.number * prc.price;
+        }
+      }
+
+      //CATEGORY BASE INGREDIENTS
+      if (!noInheritFromCategory) {
+        let foundCategory;
+        try {
+          foundCategory = await CategoryModel.findById(category).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+
+        if (!foundCategory) {
+          throw new Error('Could not find category to calculate the price.');
+        }
+
+        if (foundCategory.baseIngredients)
+          for (const ing of foundCategory.baseIngredients) {
+            let foundIng;
+            try {
+              foundIng = await IngredientModel.findById(ing.ingredient).exec();
+            } catch (err) {
+              throw new Error(`Unexpected error. ${err}`);
+            }
+
+            if (!foundIng) {
+              throw new Error(
+                'Could not found one of ingredients to calculate the price.',
+              );
+            }
+
+            for (const prc of foundIng.price) {
+              const ind = returnedPrice.findIndex((p) => p.size === prc.size);
+              returnedPrice[ind].price += ing.number * prc.price;
+            }
+          }
+      }
+
+      return returnedPrice;
+    },
+
+    ingredients: async (parent: Item) => {
+      let ings = [];
+
+      if (parent.ingredients) {
+        for (const ing of parent.ingredients) {
+          let foundIng;
+          try {
+            foundIng = await IngredientModel.findById(ing.ingredient).exec();
+          } catch (err) {
+            throw new Error(`Unexpected error. ${err}`);
+          }
+
+          if (foundIng) {
+            ings.push({ ingredient: foundIng, number: ing.number });
+          } else {
+            return null;
+          }
+        }
+
+        let foundCategory;
+        try {
+          foundCategory = await CategoryModel.findById(parent.category).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+
+        if (!foundCategory) {
+          throw new Error('Could not found category');
+        }
+
+        for (const ing of foundCategory.baseIngredients!) {
+          let foundIng;
+          try {
+            foundIng = await IngredientModel.findById(ing.ingredient).exec();
+          } catch (err) {
+            throw new Error(`Unexpected error. ${err}`);
+          }
+
+          if (foundIng) {
+            ings.push({
+              ingredient: foundIng,
+              number: ing.number,
+              inherited: true,
+            });
+          } else {
+            return null;
+          }
+        }
+      } else {
+        return null;
+      }
+
+      return ings;
+    },
+    availableSides: async (parent: any) => {
+      let availableSides = [];
+
+      if (parent.availableSides) {
+        //
+        for (const side of parent.availableSides) {
+          let foundSide;
+          try {
+            foundSide = await ItemModel.findById(side).exec();
+          } catch (err) {
+            throw new Error(`Unexpected error. ${err}`);
+          }
+
+          if (foundSide) {
+            availableSides.push(foundSide);
+          } else {
+            return null;
+          }
+        }
+
+        let foundCategory;
+        try {
+          foundCategory = await CategoryModel.findById(parent.category).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+
+        if (!foundCategory) {
+          throw new Error('Could not found category');
+        }
+
+        for (const side of foundCategory.availableSides!) {
+          let foundSide;
+          try {
+            foundSide = await ItemModel.findById(side).exec();
+          } catch (err) {
+            throw new Error(`Unexpected error. ${err}`);
+          }
+          if (foundSide) {
+            availableSides.push(foundSide);
+          } else {
+            return null;
+          }
+        }
+      } else {
+        return null;
+      }
+
+      return availableSides;
+    },
+    customComposition: async (parent: Item) => {
+      let customComposition = null;
+
+      if (parent.customComposition) {
+        try {
+          customComposition = await CustomCompositionModel.findById(
+            parent.customComposition,
+          ).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+      }
+
+      return customComposition;
+    },
+  },
+
   Query: {
     getItem: async (
       _: any,
@@ -34,13 +260,7 @@ export default {
       let returnedItem;
 
       try {
-        returnedItem = await ItemModel.findById(id)
-          .populate('category')
-          .populate('size')
-          .populate('ingredients.ingredient')
-          .populate('availableSides')
-          .populate('customComposition')
-          .exec();
+        returnedItem = await ItemModel.findById(id).exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
@@ -63,12 +283,7 @@ export default {
       let returnedItems;
 
       try {
-        returnedItems = await ItemModel.find()
-          .populate('category')
-          .populate('size')
-          .populate('ingredients.ingredient')
-          .populate('availableSides')
-          .exec();
+        returnedItems = await ItemModel.find().exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
@@ -260,8 +475,8 @@ export default {
         itemObj.availableSides = availableSides;
       }
 
-      let returnedItem: ItemDoc | null;
       const item = new ItemModel(itemObj);
+
       try {
         const sess = await startSession();
         sess.startTransaction();
@@ -292,22 +507,11 @@ export default {
         }
 
         await sess.commitTransaction();
-
-        returnedItem = await ItemModel.findById(item.id)
-          .populate('category')
-          .populate('size')
-          .populate('ingredients')
-          .populate('availableItems')
-          .exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
 
-      if (!returnedItem) {
-        throw new Error('Could not find saved Item.');
-      }
-
-      return returnedItem.toObject({ getters: true });
+      return item.toObject({ getters: true });
     },
   },
 };

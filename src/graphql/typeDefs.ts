@@ -36,33 +36,26 @@ export default gql`
   type Ingredient {
     name: String!
     price: [Price!]!
-    size: Size!
+    size: Size
     uniqueName: ID!
     id: ID!
   }
 
   type NumberedIngredient {
-    ingredient: IngredientNoSize!
+    ingredient: Ingredient!
     number: Int
-  }
-
-  type IngredientNoSize {
-    name: String!
-    size: ID!
-    price: [Price!]!
-    uniqueName: ID!
-    id: ID!
+    inherited: Boolean
   }
 
   type Category {
     name: String!
-    size: Size!
+    size: Size
     basePrice: [Price!]
     baseIngredients: [NumberedIngredient!]
     options: [Option!]
     availableSides: [Item!]
     customComposition: CustomComposition
-    items: [Item!]!
+    items: [Item!]
     id: ID!
   }
 
@@ -80,17 +73,16 @@ export default gql`
   type Price {
     size: String!
     price: Float!
-    id: ID
   }
 
   type Item {
     name: String!
-    description: String!
+    description: String
     category: Category
     noInheritFromCategory: Boolean
-    size: Size!
-    basePrice: [Price!]!
-    price: [Price!]!
+    size: Size
+    basePrice: [Price!]
+    price: [Price!]
     ingredients: [NumberedIngredient!]
     itemOptions: [Option!]
     availableSides: [Item!]
@@ -98,26 +90,28 @@ export default gql`
     id: ID!
   }
 
-  type CustomCompositionGroup {
+  type CustomComposition {
     name: String!
-    minIng: Int!
-    maxIng: Int!
-    maxTotal: Int!
+    ingredients: [CustomCompositionIngredient!]
+    groups: [CustomCompositionGroup!]
+    items: [Item!]
+    categories: [Category!]
+    size: Size
+    id: ID!
   }
 
-  type CustomComposition {
-    id: ID!
-    name: String!
-    ingredients: [CustomCompositionIngredient!]!
-    items: [ID]!
-    size: Size!
-    groups: [CustomCompositionGroup!]!
-  }
   type CustomCompositionIngredient {
     ingredient: Ingredient!
     removable: Boolean!
     group: String
     maxNumber: Int
+  }
+
+  type CustomCompositionGroup {
+    name: String!
+    minIng: Int!
+    maxIng: Int!
+    maxTotal: Int!
   }
 
   input OptionInput {
@@ -173,7 +167,7 @@ export default gql`
     getSizes: [Size!]
 
     getIngredient(id: ID): Ingredient!
-    getIngredients: [Ingredient!]
+    getIngredients(name: String, size: ID): [Ingredient!]
 
     getCustomComposition(id: ID): CustomComposition!
     getCustomCompositions: [CustomComposition!]

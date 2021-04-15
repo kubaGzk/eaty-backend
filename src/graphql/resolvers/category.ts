@@ -1,5 +1,9 @@
 import { startSession } from 'mongoose';
 import CategoryModel from '../../models/Category';
+import CustomCompositionModel from '../../models/CustomComposition';
+import IngredientModel from '../../models/Ingredient';
+import ItemModel from '../../models/Item';
+import SizeModel from '../../models/Size';
 import ac from '../../models/UserRoles';
 import checkAuth from '../../util/check-auth';
 import { Category, Option } from '../../util/types';
@@ -14,6 +18,108 @@ import {
 import { validateCategoryInput } from '../../util/validators';
 
 export default {
+  Category: {
+    size: async (parent: Category) => {
+      let size = null;
+
+      if (parent.size) {
+        try {
+          size = await SizeModel.findById(parent.size).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+      }
+
+      return size;
+    },
+
+    baseIngredients: async (parent: Category) => {
+      let baseIngredients = [];
+
+      if (parent.baseIngredients) {
+        for (const ing of parent.baseIngredients) {
+          let foundIng;
+          try {
+            foundIng = await IngredientModel.findById(ing.ingredient).exec();
+          } catch (err) {
+            throw new Error(`Unexpected error. ${err}`);
+          }
+
+          if (foundIng) {
+            baseIngredients.push({ ingredient: foundIng, number: ing.number });
+          } else {
+            return null;
+          }
+        }
+      } else {
+        return null;
+      }
+
+      return baseIngredients;
+    },
+    availableSides: async (parent: Category) => {
+      let availableSides = [];
+
+      if (parent.availableSides) {
+        for (const side of parent.availableSides) {
+          let foundSide;
+          try {
+            foundSide = await ItemModel.findById(side).exec();
+          } catch (err) {
+            throw new Error(`Unexpected error. ${err}`);
+          }
+
+          if (foundSide) {
+            availableSides.push(foundSide);
+          } else {
+            return null;
+          }
+        }
+      } else {
+        return null;
+      }
+
+      return availableSides;
+    },
+    customComposition: async (parent: Category) => {
+      let customComposition = null;
+
+      if (parent.customComposition) {
+        try {
+          customComposition = await CustomCompositionModel.findById(
+            parent.customComposition,
+          ).exec();
+        } catch (err) {
+          throw new Error(`Unexpected error. ${err}`);
+        }
+      }
+      return customComposition;
+    },
+    items: async (parent: Category) => {
+      let items = [];
+
+      if (parent.items) {
+        for (const item of parent.items) {
+          let foundItem;
+          try {
+            foundItem = await ItemModel.findById(item).exec();
+          } catch (err) {
+            throw new Error(`Unexpected error. ${err}`);
+          }
+
+          if (foundItem) {
+            items.push(foundItem);
+          } else {
+            return null;
+          }
+        }
+      } else {
+        return null;
+      }
+
+      return items;
+    },
+  },
   Query: {
     getCategory: async (
       _: any,
@@ -33,39 +139,7 @@ export default {
       let returnedCat;
 
       try {
-        returnedCat = await CategoryModel.findById(id)
-          .populate('size')
-          .populate('baseIngredients.ingredient')
-          .populate({
-            path: 'availableSides',
-            populate: [
-              { path: 'ingredients.ingredient', select: 'price' },
-              {
-                path: 'category',
-                select: 'baseIngredients',
-                populate: {
-                  path: 'baseIngredients.ingredient',
-                  select: 'price',
-                },
-              },
-            ],
-          })
-          .populate({
-            path: 'items',
-            populate: [
-              { path: 'ingredients.ingredient', select: 'price' },
-              {
-                path: 'category',
-                select: 'baseIngredients',
-                populate: {
-                  path: 'baseIngredients.ingredient',
-                  select: 'price',
-                },
-              },
-            ],
-          })
-          .populate('customComposition')
-          .exec();
+        returnedCat = await CategoryModel.findById(id).exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
@@ -92,39 +166,7 @@ export default {
       let returnedCats;
 
       try {
-        returnedCats = await CategoryModel.find()
-          .populate('size')
-          .populate('baseIngredients.ingredient')
-          .populate({
-            path: 'availableSides',
-            populate: [
-              { path: 'ingredients.ingredient', select: 'price' },
-              {
-                path: 'category',
-                select: 'baseIngredients',
-                populate: {
-                  path: 'baseIngredients.ingredient',
-                  select: 'price',
-                },
-              },
-            ],
-          })
-          .populate({
-            path: 'items',
-            populate: [
-              { path: 'ingredients.ingredient', select: 'price' },
-              {
-                path: 'category',
-                select: 'baseIngredients',
-                populate: {
-                  path: 'baseIngredients.ingredient',
-                  select: 'price',
-                },
-              },
-            ],
-          })
-          .populate('customComposition')
-          .exec();
+        returnedCats = await CategoryModel.find().exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
@@ -229,7 +271,6 @@ export default {
       }
 
       const category = new CategoryModel(catObj);
-      let returnedCat;
 
       try {
         const sess = await startSession();
@@ -248,23 +289,11 @@ export default {
         }
 
         await sess.commitTransaction();
-
-        returnedCat = await CategoryModel.findById(category.id)
-          .populate('size')
-          .populate('baseIngredients.ingredient')
-          .populate('availableSides')
-          .populate('availableSides.category')
-          .populate('customComposition')
-          .exec();
       } catch (err) {
         throw new Error(`Unexpected error. ${err}`);
       }
 
-      if (!returnedCat) {
-        throw new Error('Could not find saved Ingredient.');
-      }
-
-      return returnedCat.toObject({ getters: true });
+      return category.toObject({ getters: true });
     },
     updateCategory: async () => {},
     deleteCategory: async () => {},
